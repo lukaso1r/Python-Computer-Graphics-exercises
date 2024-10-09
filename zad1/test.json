@@ -1,0 +1,255 @@
+[
+    {
+        "type": "line",
+        "coords": [
+            625,
+            2,
+            915,
+            292
+        ],
+        "color": "#9b69d8",
+        "thickness": 10
+    },
+    {
+        "type": "rectangle",
+        "coords": [
+            639,
+            112,
+            689,
+            162
+        ],
+        "color": "#9b69d8",
+        "thickness": 10
+    },
+    {
+        "type": "circle",
+        "coords": [
+            978,
+            145,
+            1038,
+            205
+        ],
+        "color": "#9b69d8",
+        "thickness": 10
+    },
+    {
+        "type": "line",
+        "coords": [
+            30.0,
+            91.0,
+            220.0,
+            433.0
+        ],
+        "color": "#9b69d8",
+        "thickness": 10
+    },
+    {
+        "type": "rectangle",
+        "coords": [
+            46,
+            84,
+            246,
+            284
+        ],
+        "color": "#9b69d8",
+        "thickness": 10
+    },
+    {
+        "type": "circle",
+        "coords": [
+            383.0,
+            180.0,
+            418.0,
+            215.0
+        ],
+        "color": "#9b69d8",
+        "thickness": 10
+    },
+    {
+        "type": "pencil",
+        "coords": [
+            835.0,
+            386.0,
+            472,
+            420.0
+        ],
+        "color": "black",
+        "thickness": 1
+    },
+    {
+        "type": "pencil",
+        "coords": [
+            541.0,
+            463.0,
+            959,
+            419.0
+        ],
+        "color": "black",
+        "thickness": 1
+    },
+    {
+        "type": "pencil",
+        "coords": [
+            770.0,
+            391.0,
+            795,
+            454.0
+        ],
+        "color": "black",
+        "thickness": 1
+    },
+    {
+        "type": "pencil",
+        "coords": [
+            845.0,
+            490.0,
+            499,
+            338.0
+        ],
+        "color": "black",
+        "thickness": 1
+    },
+    {
+        "type": "pencil",
+        "coords": [
+            499.0,
+            338.0,
+            740,
+            484.0
+        ],
+        "color": "black",
+        "thickness": 1
+    },
+    {
+        "type": "pencil",
+        "coords": [
+            886.0,
+            541.0,
+            677,
+            338.0
+        ],
+        "color": "black",
+        "thickness": 1
+    },
+    {
+        "type": "pencil",
+        "coords": [
+            743.0,
+            340.0,
+            509,
+            505.0
+        ],
+        "color": "black",
+        "thickness": 1
+    },
+    {
+        "type": "pencil",
+        "coords": [
+            524.0,
+            517.0,
+            822,
+            377.0
+        ],
+        "color": "black",
+        "thickness": 1
+    },
+    {
+        "type": "pencil",
+        "coords": [
+            966.0,
+            373.0,
+            530,
+            347.0
+        ],
+        "color": "black",
+        "thickness": 1
+    },
+    {
+        "type": "pencil",
+        "coords": [
+            531.0,
+            348.0,
+            810,
+            538.0
+        ],
+        "color": "black",
+        "thickness": 1
+    },
+    {
+        "type": "pencil",
+        "coords": [
+            985.0,
+            556.0,
+            625,
+            288.0
+        ],
+        "color": "black",
+        "thickness": 1
+    },
+    {
+        "type": "pencil",
+        "coords": [
+            752.0,
+            314.0,
+            645,
+            494.0
+        ],
+        "color": "black",
+        "thickness": 1
+    },
+    {
+        "type": "pencil",
+        "coords": [
+            590.0,
+            517.0,
+            864,
+            367.0
+        ],
+        "color": "black",
+        "thickness": 1
+    },
+    {
+        "type": "pencil",
+        "coords": [
+            973.0,
+            537.0,
+            544,
+            301.0
+        ],
+        "color": "black",
+        "thickness": 1
+    },
+    {
+        "type": "pencil",
+        "coords": [
+            599.0,
+            276.0,
+            712,
+            532.0
+        ],
+        "color": "black",
+        "thickness": 1
+    },
+    {
+        "type": "pencil",
+        "coords": [
+            717.0,
+            543.0,
+            790,
+            289.0
+        ],
+        "color": "black",
+        "thickness": 1
+    },
+    {
+        "type": "pencil",
+        "coords": [
+            821.0,
+            313.0,
+            468,
+            248.0
+        ],
+        "color": "black",
+        "thickness": 1
+    }
+]
