@@ -10,6 +10,7 @@ class Shape:
         self.coords = coords
         self.color = color
         self.thickness = thickness
+        self.original_color = color  # Aby przywrócić kolor po podświetleniu
 
     def to_dict(self):
         return {
@@ -26,12 +27,25 @@ class Shape:
         if color:
             self.color = color
             if self.type in ["rectangle", "circle"]:
-                self.canvas.itemconfig(self.id, fill=color, outline=color)
+                self.canvas.itemconfig(self.id, outline=color, fill=color)
             else:
-                self.canvas.itemconfig(self.id, fill=color)  # Poprawka
+                self.canvas.itemconfig(self.id, fill=color)
         if thickness:
             self.thickness = thickness
             self.canvas.itemconfig(self.id, width=thickness)
+
+    def highlight(self, highlight_color="blue"):
+        self.original_color = self.color  # Zapisz oryginalny kolor
+        if self.type in ["rectangle", "circle"]:
+            self.canvas.itemconfig(self.id, outline=highlight_color)
+        else:
+            self.canvas.itemconfig(self.id, fill=highlight_color)
+
+    def unhighlight(self):
+        if self.type in ["rectangle", "circle"]:
+            self.canvas.itemconfig(self.id, outline=self.original_color)
+        else:
+            self.canvas.itemconfig(self.id, fill=self.original_color)
 
 class DrawingApp:
     def __init__(self, root):
@@ -45,6 +59,7 @@ class DrawingApp:
         self.start_y = None
         self.pencil_mode = False
         self.selected_shape = None
+        self.drag_data = {}
         self.resizing = False
 
         self.create_widgets()
@@ -67,7 +82,7 @@ class DrawingApp:
         self.btn_pencil = tk.Button(top_frame, text="Ołówek", command=self.select_pencil)
         self.btn_pencil.pack(side=tk.LEFT, padx=2, pady=2)
 
-        # **Nowy Przycisk: Wyczyść płótno**
+        # Przycisk Wyczyść płótno
         self.btn_clear = tk.Button(top_frame, text="Wyczyść płótno", command=self.clear_canvas, fg="red")
         self.btn_clear.pack(side=tk.LEFT, padx=10, pady=2)
 
@@ -97,14 +112,14 @@ class DrawingApp:
         self.entry_y2.pack(side=tk.LEFT)
 
         # Kolor
-        tk.Label(bottom_frame, text="Kolor:").pack(side=tk.LEFT, padx=(10,0))
+        tk.Label(bottom_frame, text="Kolor:").pack(side=tk.LEFT, padx=(10, 0))
         self.entry_color = tk.Entry(bottom_frame, width=10)
         self.entry_color.pack(side=tk.LEFT)
         self.btn_color = tk.Button(bottom_frame, text="Wybierz kolor", command=self.choose_color)
         self.btn_color.pack(side=tk.LEFT, padx=2)
 
         # Grubość
-        tk.Label(bottom_frame, text="Grubość:").pack(side=tk.LEFT, padx=(10,0))
+        tk.Label(bottom_frame, text="Grubość:").pack(side=tk.LEFT, padx=(10, 0))
         self.entry_thickness = tk.Entry(bottom_frame, width=3)
         self.entry_thickness.pack(side=tk.LEFT)
 
@@ -118,10 +133,6 @@ class DrawingApp:
         self.btn_generate_circle = tk.Button(bottom_frame, text="Generuj okrąg", command=self.generate_circle)
         self.btn_generate_circle.pack(side=tk.LEFT, padx=2, pady=2)
 
-        # Przycisk Anuluj zmianę rozmiaru
-        self.btn_cancel_resize = tk.Button(bottom_frame, text="Anuluj zmianę rozmiaru", command=self.cancel_resize)
-        self.btn_cancel_resize.pack(side=tk.LEFT, padx=(20,2), pady=2)
-
         # Przycisk Zapisz i Odczytaj
         self.btn_save = tk.Button(bottom_frame, text="Zapisz do JSON", command=self.save_to_json)
         self.btn_save.pack(side=tk.RIGHT, padx=2, pady=2)
@@ -134,6 +145,52 @@ class DrawingApp:
         self.canvas.bind("<B1-Motion>", self.on_canvas_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_canvas_release)
         self.canvas.bind("<Double-Button-1>", self.on_canvas_double_click)
+        self.canvas.bind("<ButtonPress-3>", self.on_resize_start)
+        self.canvas.bind("<B3-Motion>", self.on_resizing)
+        self.canvas.bind("<ButtonRelease-3>", self.on_resize_end)
+
+    def on_resize_start(self, event):
+        # Ustaw flagę, aby zablokować inne interakcje podczas zmiany rozmiaru
+        self.resizing = True
+        self.current_shape = self.canvas.find_closest(event.x, event.y)[0]
+        self.start_x = event.x
+        self.start_y = event.y
+        self.original_coords = self.canvas.coords(self.current_shape)
+        self.original_shape = self.get_shape_by_id(self.current_shape)
+        if self.original_shape:
+            self.original_shape.highlight(highlight_color="red")  # Opcjonalnie podświetl kształt podczas zmiany rozmiaru
+
+    def on_resizing(self, event):
+        if self.resizing and self.current_shape:
+            if not self.original_shape:
+                return
+            # Aktualizuj współrzędne w zależności od typu kształtu
+            if self.original_shape.type == "circle":
+                # Oblicz nowy promień na podstawie ruchu kursora
+                radius = max(abs(event.x - self.start_x), abs(event.y - self.start_y))
+                new_coords = [
+                    self.start_x - radius,
+                    self.start_y - radius,
+                    self.start_x + radius,
+                    self.start_y + radius
+                ]
+            else:
+                # Dla prostokątów i linii
+                new_coords = [self.start_x, self.start_y, event.x, event.y]
+            # Aktualizuj kształt na płótnie
+            self.canvas.coords(self.current_shape, *new_coords)
+            # Aktualizuj koordynaty w obiekcie Shape
+            self.original_shape.coords = new_coords
+
+    def on_resize_end(self, event):
+        if self.resizing and self.current_shape:
+            if self.original_shape:
+                # Aktualizuj obiekt Shape po zakończeniu zmiany rozmiaru
+                self.original_shape.coords = self.canvas.coords(self.current_shape)
+                self.original_shape.unhighlight()
+            self.resizing = False
+            self.current_shape = None
+            self.original_shape = None
 
     def select_line(self):
         self.current_tool = "line"
@@ -179,7 +236,7 @@ class DrawingApp:
             y2 = int(self.entry_y2.get())
             color = self.entry_color.get() or "black"
             thickness = int(self.entry_thickness.get()) if self.entry_thickness.get() else 1
-            rect = self.canvas.create_rectangle(x1, y1, x2, y2, outline=color, width=thickness)
+            rect = self.canvas.create_rectangle(x1, y1, x2, y2, outline=color, fill="", width=thickness)
             shape = Shape(self.canvas, rect, "rectangle", [x1, y1, x2, y2], color, thickness)
             self.shapes.append(shape)
         except ValueError:
@@ -194,56 +251,76 @@ class DrawingApp:
             thickness = int(self.entry_thickness.get()) if self.entry_thickness.get() else 1
             x2 = x1 + radius
             y2 = y1 + radius
-            circle = self.canvas.create_oval(x1, y1, x2, y2, outline=color, width=thickness)
+            circle = self.canvas.create_oval(x1, y1, x2, y2, outline=color, fill="", width=thickness)
             shape = Shape(self.canvas, circle, "circle", [x1, y1, x2, y2], color, thickness)
             self.shapes.append(shape)
         except ValueError:
             messagebox.showerror("Błąd", "Proszę wprowadzić prawidłowe wartości.")
 
     def on_canvas_click(self, event):
+        # Jeśli trwa zmiana rozmiaru, ignoruj lewy klik
+        if self.resizing:
+            return
+
+        # Reset previous selection
+        if self.selected_shape:
+            self.selected_shape.unhighlight()
+            self.selected_shape = None
+
         # Zaznaczanie kształtu
         item = self.canvas.find_closest(event.x, event.y)
         if item:
             shape = self.get_shape_by_id(item[0])
             if shape:
                 self.selected_shape = shape
+                shape.highlight()
                 self.drag_data = {"x": event.x, "y": event.y}
         else:
             self.selected_shape = None
 
         if self.pencil_mode:
-            self.current_shape = self.canvas.create_line(event.x, event.y, event.x, event.y, fill="black", width=1)
-            shape = Shape(self.canvas, self.current_shape, "pencil", [event.x, event.y, event.x, event.y], "black", 1)
+            try:
+                thickness = int(self.entry_thickness.get()) if self.entry_thickness.get() else 1
+            except ValueError:
+                thickness = 1
+            self.current_shape = self.canvas.create_line(event.x, event.y, event.x, event.y, fill=self.entry_color.get() or "black", width=thickness)
+            shape = Shape(self.canvas, self.current_shape, "pencil", [event.x, event.y, event.x, event.y], self.entry_color.get() or "black", thickness)
             self.shapes.append(shape)
-
         elif self.current_tool in ["line", "rectangle", "circle"]:
             self.start_x = event.x
             self.start_y = event.y
             color = self.entry_color.get() or "black"
-            thickness = int(self.entry_thickness.get()) if self.entry_thickness.get() else 1
+            try:
+                thickness = int(self.entry_thickness.get()) if self.entry_thickness.get() else 1
+            except ValueError:
+                thickness = 1
 
             if self.current_tool == "line":
                 self.current_shape = self.canvas.create_line(event.x, event.y, event.x, event.y, fill=color, width=thickness)
                 shape = Shape(self.canvas, self.current_shape, "line", [self.start_x, self.start_y, self.start_x, self.start_y], color, thickness)
 
             elif self.current_tool == "rectangle":
-                self.current_shape = self.canvas.create_rectangle(event.x, event.y, event.x, event.y, outline=color, width=thickness)
-                shape = Shape(self.canvas, self.current_shape, "rectangle", [self.start_x, self.start_y, self.start_x, self.start_y], color, thickness)
+                self.current_shape = self.canvas.create_rectangle(event.x, event.y, event.x, event.y, outline=color, fill="", width=thickness)
+                shape = Shape(self.canvas, self.current_shape, "rectangle", [self.start_x, self.start_y, event.x, event.y], color, thickness)
 
             elif self.current_tool == "circle":
-                self.current_shape = self.canvas.create_oval(event.x, event.y, event.x, event.y, outline=color, width=thickness)
-                shape = Shape(self.canvas, self.current_shape, "circle", [self.start_x, self.start_y, self.start_x, self.start_y], color, thickness)
+                self.current_shape = self.canvas.create_oval(event.x, event.y, event.x, event.y, outline=color, fill="", width=thickness)
+                shape = Shape(self.canvas, self.current_shape, "circle", [self.start_x, self.start_y, event.x, event.y], color, thickness)
 
             # Dodaj nowo utworzony kształt do listy kształtów
             self.shapes.append(shape)
 
     def on_canvas_drag(self, event):
+        # Jeśli trwa zmiana rozmiaru, ignoruj przeciąganie lewym przyciskiem
+        if self.resizing:
+            return
+
         if self.pencil_mode and self.current_shape:
             x1, y1, x2, y2 = self.canvas.coords(self.current_shape)
             self.canvas.coords(self.current_shape, x1, y1, event.x, event.y)
             shape = self.get_shape_by_id(self.current_shape)
             if shape:
-                shape.coords = [x1, y1, event.x, y2]
+                shape.coords = [x1, y1, event.x, event.y]
         elif self.current_tool in ["line", "rectangle", "circle"] and self.current_shape:
             if self.current_tool == "line":
                 self.canvas.coords(self.current_shape, self.start_x, self.start_y, event.x, event.y)
@@ -252,6 +329,9 @@ class DrawingApp:
             elif self.current_tool == "circle":
                 radius = max(abs(event.x - self.start_x), abs(event.y - self.start_y))
                 self.canvas.coords(self.current_shape, self.start_x, self.start_y, self.start_x + radius, self.start_y + radius)
+            shape = self.get_shape_by_id(self.current_shape)
+            if shape:
+                shape.coords = self.canvas.coords(self.current_shape)
         elif self.selected_shape and not self.resizing:
             dx = event.x - self.drag_data["x"]
             dy = event.y - self.drag_data["y"]
@@ -260,11 +340,18 @@ class DrawingApp:
             self.drag_data["y"] = event.y
 
     def on_canvas_release(self, event):
+        # Jeśli trwa zmiana rozmiaru, zakończ ją
+        if self.resizing:
+            return
+
         if self.pencil_mode and self.current_shape:
             self.current_shape = None
         elif self.current_tool in ["line", "rectangle", "circle"] and self.current_shape:
             color = self.entry_color.get() or "black"
-            thickness = int(self.entry_thickness.get()) if self.entry_thickness.get() else 1
+            try:
+                thickness = int(self.entry_thickness.get()) if self.entry_thickness.get() else 1
+            except ValueError:
+                thickness = 1
             shape = self.get_shape_by_id(self.current_shape)
             if shape:
                 if shape.type in ["rectangle", "circle"]:
@@ -278,6 +365,8 @@ class DrawingApp:
             self.current_shape = None
             self.current_tool = None
         elif self.selected_shape:
+            # Przywróć oryginalny kolor po przesunięciu
+            self.selected_shape.unhighlight()
             self.selected_shape = None
 
     def on_canvas_double_click(self, event):
@@ -285,9 +374,6 @@ class DrawingApp:
         if item:
             shape = self.get_shape_by_id(item[0])
             if shape:
-                self.selected_shape = shape
-                self.resizing = True
-                self.highlight_shape(shape)
                 # Prompt user for new parameters
                 self.prompt_resize(shape)
 
@@ -298,33 +384,17 @@ class DrawingApp:
                 x1, y1, _, _ = shape.coords
                 x2 = x1 + new_radius
                 y2 = y1 + new_radius
-                shape.update(coords=[x1, y1, x2, y2])
+                shape.update(coords=[x1 - new_radius, y1 - new_radius, x1 + new_radius, y1 + new_radius])
         else:
             try:
-                new_x1 = simpledialog.askinteger("Zmiana rozmiaru", "Podaj nowy X1:", parent=self.root)
-                new_y1 = simpledialog.askinteger("Zmiana rozmiaru", "Podaj nowy Y1:", parent=self.root)
-                new_x2 = simpledialog.askinteger("Zmiana rozmiaru", "Podaj nowy X2:", parent=self.root)
-                new_y2 = simpledialog.askinteger("Zmiana rozmiaru", "Podaj nowy Y2:", parent=self.root)
+                new_x1 = simpledialog.askinteger("Zmiana rozmiaru", "Podaj nowy X1:", parent=self.root, initialvalue=shape.coords[0])
+                new_y1 = simpledialog.askinteger("Zmiana rozmiaru", "Podaj nowy Y1:", parent=self.root, initialvalue=shape.coords[1])
+                new_x2 = simpledialog.askinteger("Zmiana rozmiaru", "Podaj nowy X2:", parent=self.root, initialvalue=shape.coords[2])
+                new_y2 = simpledialog.askinteger("Zmiana rozmiaru", "Podaj nowy Y2:", parent=self.root, initialvalue=shape.coords[3])
                 if None not in (new_x1, new_y1, new_x2, new_y2):
                     shape.update(coords=[new_x1, new_y1, new_x2, new_y2])
             except (ValueError, TypeError):
                 messagebox.showerror("Błąd", "Nieprawidłowe wartości.")
-
-        self.unhighlight_shape(shape)
-        self.resizing = False
-        self.selected_shape = None
-
-    def cancel_resize(self):
-        if self.resizing and self.selected_shape:
-            self.unhighlight_shape(self.selected_shape)
-            self.resizing = False
-            self.selected_shape = None
-
-    def highlight_shape(self, shape):
-        self.canvas.itemconfig(shape.id, dash=(4, 2))
-
-    def unhighlight_shape(self, shape):
-        self.canvas.itemconfig(shape.id, dash=())
 
     def move_shape(self, shape, dx, dy):
         coords = shape.coords
@@ -365,10 +435,11 @@ class DrawingApp:
         if file_path:
             try:
                 with open(file_path, 'r') as f:
-                    data = json.load(f)
+                    shapes_data = json.load(f)
                 self.canvas.delete("all")
                 self.shapes.clear()
-                for item in data:
+                self.selected_shape = None  # Resetowanie zaznaczenia
+                for item in shapes_data:
                     shape_type = item['type']
                     coords = item['coords']
                     color = item['color']
@@ -376,9 +447,9 @@ class DrawingApp:
                     if shape_type == "line":
                         shape_id = self.canvas.create_line(*coords, fill=color, width=thickness)
                     elif shape_type == "rectangle":
-                        shape_id = self.canvas.create_rectangle(*coords, outline=color, width=thickness)
+                        shape_id = self.canvas.create_rectangle(*coords, outline=color, fill="", width=thickness)
                     elif shape_type == "circle":
-                        shape_id = self.canvas.create_oval(*coords, outline=color, width=thickness)
+                        shape_id = self.canvas.create_oval(*coords, outline=color, fill="", width=thickness)
                     elif shape_type == "pencil":
                         shape_id = self.canvas.create_line(*coords, fill=color, width=thickness)
                     shape = Shape(self.canvas, shape_id, shape_type, coords, color, thickness)
@@ -387,7 +458,6 @@ class DrawingApp:
             except (IOError, json.JSONDecodeError) as e:
                 messagebox.showerror("Błąd", f"Nie udało się wczytać pliku:\n{e}")
 
-    # **Nowa Metoda: clear_canvas**
     def clear_canvas(self):
         if not self.shapes:
             messagebox.showinfo("Informacja", "Płótno jest już puste.")
@@ -396,12 +466,10 @@ class DrawingApp:
         if confirm:
             self.canvas.delete("all")
             self.shapes.clear()
+            self.selected_shape = None
             messagebox.showinfo("Sukces", "Płótno zostało wyczyszczone.")
 
-def main():
+if __name__ == "__main__":
     root = tk.Tk()
     app = DrawingApp(root)
     root.mainloop()
-
-if __name__ == "__main__":
-    main()
